@@ -75,9 +75,9 @@
     },
     {
       "name": "dart_style",
-      "rootUri": "file:///Users/waitwalker/.pub-cache/hosted/pub.flutter-io.cn/dart_style-1.3.14",
+      "rootUri": "file:///Users/waitwalker/.pub-cache/hosted/pub.flutter-io.cn/dart_style-2.0.0",
       "packageUri": "lib/",
-      "languageVersion": "2.11"
+      "languageVersion": "2.12"
     },
     {
       "name": "file",
@@ -314,7 +314,7 @@
       "languageVersion": "2.11"
     }
   ],
-  "generated": "2021-04-02T06:03:10.635177Z",
+  "generated": "2021-04-02T06:33:48.287026Z",
   "generator": "pub",
   "generatorVersion": "2.12.0"
 }
