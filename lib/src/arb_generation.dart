@@ -20,7 +20,7 @@ Map toARB(
   bool supressMetadata = false,
   bool includeSourceText = false,
 }) {
-  if (message.messagePieces.isEmpty) return null;
+  if (message.messagePieces.isEmpty) return {};
   var out = {};
   out[message.name] = icuForm(message);
 
@@ -52,7 +52,7 @@ Map arbMetadata(MainMessage message) {
 
 void addArgumentFor(MainMessage message, String arg, Map result) {
   var extraInfo = {};
-  if (message.examples != null && message.examples[arg] != null) {
+  if (message.examples.isNotEmpty && message.examples[arg] != null) {
     extraInfo["example"] = message.examples[arg];
   }
   result[arg] = extraInfo;

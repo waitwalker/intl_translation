@@ -6,11 +6,13 @@
 
 library message_extraction_test;
 
-import 'package:test/test.dart';
-import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:path/path.dart' as path;
+import 'package:test/test.dart';
+
 import '../data_directory.dart';
 
 final dart = Platform.executable;
@@ -44,7 +46,7 @@ var useLocalDirectory = false;
 /// applied to all the arguments of [run]. It will ignore a string that
 /// is an absolute path or begins with "--", because some of the arguments
 /// might be command-line options.
-String asTestDirPath([String s]) {
+String? asTestDirPath([String? s]) {
   if (s == null || s.startsWith("--") || path.isAbsolute(s)) return s;
   return path.join(packageDirectory, 'test', 'message_extraction', s);
 }
@@ -53,7 +55,7 @@ String asTestDirPath([String s]) {
 /// applied to all the arguments of [run]. It will ignore a string that
 /// is an absolute path or begins with "--", because some of the arguments
 /// might be command-line options.
-String asTempDirPath([String s]) {
+String? asTempDirPath([String? s]) {
   if (s == null || s.startsWith("--") || path.isAbsolute(s)) return s;
   return path.join(tempDir, s);
 }
@@ -80,24 +82,27 @@ main() {
 
 void copyFilesToTempDirectory() {
   if (useLocalDirectory) return;
+  print('Use temp directory at $tempDir');
   var files = [
-    asTestDirPath('sample_with_messages.dart'),
-    asTestDirPath('part_of_sample_with_messages.dart'),
-    asTestDirPath('verify_messages.dart'),
-    asTestDirPath('run_and_verify.dart'),
-    asTestDirPath('embedded_plural_text_before.dart'),
-    asTestDirPath('embedded_plural_text_after.dart'),
-    asTestDirPath('print_to_list.dart'),
-    asTestDirPath('dart_list.txt'),
-    asTestDirPath('arb_list.txt'),
+    asTestDirPath('sample_with_messages.dart')!,
+    asTestDirPath('part_of_sample_with_messages.dart')!,
+    asTestDirPath('verify_messages.dart')!,
+    asTestDirPath('run_and_verify.dart')!,
+    asTestDirPath('embedded_plural_text_before.dart')!,
+    asTestDirPath('embedded_plural_text_after.dart')!,
+    asTestDirPath('print_to_list.dart')!,
+    asTestDirPath('dart_list.txt')!,
+    asTestDirPath('arb_list.txt')!,
     '.packages' // Copy this so that package test can find the imports
   ];
   for (var filename in files) {
-    var file = new File(filename);
+    final file = new File(filename);
     if (file.existsSync()) {
       file.copySync(path.join(tempDir, path.basename(filename)));
     }
   }
+  final file = new File('test/pubspec.txt');
+  file.copySync(path.join(tempDir, path.basename('pubspec.yaml')));
 }
 
 void deleteGeneratedFiles() {
@@ -114,11 +119,11 @@ void deleteGeneratedFiles() {
 /// are in dir() and need to be qualified in case that's not our working
 /// directory.
 Future<ProcessResult> run(
-    ProcessResult previousResult, List<String> filenames) {
+    ProcessResult? previousResult, List<String> filenames) async {
   // If there's a failure in one of the sub-programs, print its output.
   checkResult(previousResult);
   var filesInTheRightDirectory = filenames
-      .map((x) => asTempDirPath(x))
+      .map((x) => asTempDirPath(x)!)
       .map((x) => path.normalize(x))
       .toList();
   // Inject the script argument --output-dir in between the script and its
@@ -128,12 +133,19 @@ Future<ProcessResult> run(
     ..add(filesInTheRightDirectory.first)
     ..addAll(["--output-dir=$tempDir"])
     ..addAll(filesInTheRightDirectory.skip(1));
+  print('Run process: $dart $args');
   var result = Process.run(dart, args,
       stdoutEncoding: new Utf8Codec(), stderrEncoding: new Utf8Codec());
   return result;
 }
 
-checkResult(ProcessResult previousResult) {
+Future<ProcessResult> _runPubGet() {
+  return Process.run(dart, ['pub', 'get'],
+      workingDirectory: tempDir,
+      stdoutEncoding: new Utf8Codec(), stderrEncoding: new Utf8Codec());
+}
+
+checkResult(ProcessResult? previousResult) {
   if (previousResult != null) {
     if (previousResult.exitCode != 0) {
       print("Error running sub-program:");
@@ -146,24 +158,24 @@ checkResult(ProcessResult previousResult) {
   }
 }
 
-Future<ProcessResult> extractMessages(ProcessResult previousResult) =>
+Future<ProcessResult> extractMessages(ProcessResult? previousResult) =>
     run(previousResult, [
-      asTestDirPath('../../bin/extract_to_arb.dart'),
+      asTestDirPath('../../bin/extract_to_arb.dart')!,
       '--suppress-warnings',
       '--sources-list-file',
       'dart_list.txt'
     ]);
 
-Future<ProcessResult> generateTranslationFiles(ProcessResult previousResult) =>
+Future<ProcessResult> generateTranslationFiles(ProcessResult? previousResult) =>
     run(previousResult, [
-      asTestDirPath('make_hardcoded_translation.dart'),
+      asTestDirPath('make_hardcoded_translation.dart')!,
       'intl_messages.arb'
     ]);
 
 Future<ProcessResult> generateCodeFromTranslation(
-        ProcessResult previousResult) =>
+        ProcessResult? previousResult) =>
     run(previousResult, [
-      asTestDirPath('../../bin/generate_from_arb.dart'),
+      asTestDirPath('../../bin/generate_from_arb.dart')!,
       deferredLoadArg,
       '--' + (useJson ? '' : 'no-') + 'json',
       '--generated-file-prefix=foo_',
@@ -173,6 +185,8 @@ Future<ProcessResult> generateCodeFromTranslation(
       'arb_list.txt'
     ]);
 
-Future<ProcessResult> runAndVerify(ProcessResult previousResult) {
+Future<ProcessResult> runAndVerify(ProcessResult? previousResult) async {
+  final resultPubGet = await _runPubGet();
+  checkResult(resultPubGet);
   return run(previousResult, ['run_and_verify.dart', 'intl_messages.arb']);
 }
